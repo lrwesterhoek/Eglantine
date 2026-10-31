@@ -356,6 +356,13 @@ void PresentManager::PresentThread(std::stop_token token) {
 }
 
 void PresentManager::RecreateSwapchain(Frame* frame) {
+    // The old swapchain's semaphores can still be pending: a suboptimal acquire still signals
+    // its semaphore, and MoltenVK does so from a Metal command buffer that fails ("Invalid
+    // Input", device loss) once the semaphore is destroyed. Let the GPU finish first.
+    {
+        std::scoped_lock submit_lock{scheduler.submit_mutex};
+        void(device.GetLogical().WaitIdle());
+    }
     swapchain.Create(*surface, frame->width, frame->height); // Pass raw pointer
     SetImageCount();
 }

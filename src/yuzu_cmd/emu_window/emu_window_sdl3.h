@@ -7,6 +7,8 @@
 #pragma once
 
 #include <cstdlib>
+#include <mutex>
+#include <string>
 #include <tuple>
 #include <utility>
 
@@ -50,6 +52,9 @@ public:
     // Sets the window icon from yuzu.bmp
     void SetWindowIcon();
 
+    /// Applies the title the titlebar timer prepared; window calls must run on the main thread.
+    void UpdateTitle();
+
 protected:
     /// Called by WaitEvent when a key is pressed or released.
     void OnKeyEvent(int key, u8 state);
@@ -92,6 +97,8 @@ protected:
 
     /// Periodic changer of titlebar (independent of event loop)
     SDL_TimerID titlebar_timer;
+    std::mutex title_mutex;
+    std::string pending_title;
 
     // Mouse resetter once it
     SDL_TimerID mouse_timer;

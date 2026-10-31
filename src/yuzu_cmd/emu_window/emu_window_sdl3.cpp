@@ -39,7 +39,8 @@ EmuWindow_SDL3::EmuWindow_SDL3(InputCommon::InputSubsystem* input_subsystem_, Co
         auto* this_ = (EmuWindow_SDL3*)userdata;
         auto const results = this_->system.GetAndResetPerfStats();
         auto const title = fmt::format("{} | {}-{} | FPS: {:.0f} ({:.0f}%)", Common::g_build_fullname, Common::g_scm_branch, Common::g_scm_desc, results.average_game_fps, results.emulation_speed * 100.0f);
-        SDL_SetWindowTitle(this_->render_window, title.c_str());
+        std::scoped_lock lock{this_->title_mutex};
+        this_->pending_title = title;
         return 2000;
     }, this);
     mouse_timer = SDL_AddTimer(100, [](void *userdata, SDL_TimerID, Uint32) -> Uint32 {
@@ -50,6 +51,14 @@ EmuWindow_SDL3::EmuWindow_SDL3(InputCommon::InputSubsystem* input_subsystem_, Co
         }
         return 100;
     }, this);
+}
+
+void EmuWindow_SDL3::UpdateTitle() {
+    std::scoped_lock lock{title_mutex};
+    if (!pending_title.empty() && render_window != nullptr) {
+        SDL_SetWindowTitle(render_window, pending_title.c_str());
+        pending_title.clear();
+    }
 }
 
 EmuWindow_SDL3::~EmuWindow_SDL3() {
